@@ -15,10 +15,16 @@ import {
   Lock,
   ArrowUpRight,
   Sparkles,
+  Mail,
+  Code,
+  Bug,
+  Briefcase,
+  X,
 } from "lucide-react";
 
 const Landing = () => {
   const [openFaq, setOpenFaq] = useState(0);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -575,9 +581,9 @@ const Landing = () => {
             <a href="https://github.com/darshan02parmar/InvestEase/tree/main/docs" className="hover:text-teal-600 transition-colors">
               Documentation
             </a>
-            <a href="https://github.com/darshan02parmar/InvestEase/issues" className="hover:text-teal-600 transition-colors">
+            <button onClick={() => setIsContactModalOpen(true)} className="hover:text-teal-600 transition-colors">
               Contact
-            </a>
+            </button>
           </div>
 
           <div className="text-sm font-medium text-gray-400 text-center md:text-left">
@@ -585,6 +591,69 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+
+      {/* Contact Modal */}
+      {isContactModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm transition-opacity" 
+            onClick={() => setIsContactModalOpen(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform transition-all animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setIsContactModalOpen(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-2xl font-black text-[#0F172A] mb-6">Need Help?</h3>
+            
+            <div className="space-y-3">
+              <a href="mailto:darshan@example.com" className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F172A]">Email</p>
+                  <p className="text-xs font-medium text-gray-500">darshan02parmar@gmail.com</p>
+                </div>
+              </a>
+              
+              <a href="https://github.com/darshan02parmar/InvestEase" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Code className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F172A]">GitHub</p>
+                  <p className="text-xs font-medium text-gray-500">View Repository</p>
+                </div>
+              </a>
+              
+              <a href="https://github.com/darshan02parmar/InvestEase/issues" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Bug className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F172A]">Report an Issue</p>
+                  <p className="text-xs font-medium text-rose-500">Open GitHub Issues</p>
+                </div>
+              </a>
+              
+              <a href="https://linkedin.com/in/darshan02parmar" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0F172A]">LinkedIn</p>
+                  <p className="text-xs font-medium text-blue-500">Connect</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
