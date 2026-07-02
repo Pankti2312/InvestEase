@@ -51,6 +51,11 @@ npm run dev
 *   **Investor Account**: `demo@investease.com` / `Demo@123`
 *   **Admin Account**: `admin@investease.com` / `Admin@123`
 
+## 📊 Mock Analytics Note
+
+> [!NOTE]
+> Business metrics shown in the prototype are representative values intended to demonstrate operational impact. In production, these metrics would be calculated from live platform analytics.
+
 ## 🛡️ Security
 
 This project is configured to safely ignore `.env` files and the `node_modules` and `uploads` directories from version control. Ensure you never commit your production `MONGO_URI` or `JWT_SECRET` to a public repository.
