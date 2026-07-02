@@ -2,7 +2,7 @@ const Portfolio = require('../models/Portfolio');
 const Investment = require('../models/Investment');
 const Notification = require('../models/Notification');
 const { recalculatePortfolio } = require('../services/portfolioService');
-const { clearDashboardCache } = require('./dashboardController');
+const { trackEvent } = require('../services/eventService');
 
 const getPortfolio = async (req, res) => {
   try {
@@ -69,17 +69,14 @@ const buyInvestment = async (req, res) => {
     // 1. Recalculate portfolio snapshot (Event Chain Module 3/4)
     await recalculatePortfolio(req.user._id);
 
-    // Evict cache
-    clearDashboardCache(req.user._id);
-
-    // 2. Create notification event (Event Chain Module 5)
-    await Notification.create({
-      userId: req.user._id,
-      title: 'Investment Successful',
-      message: `You successfully invested ₹${Number(amount).toLocaleString()} in ${fundName} (${units.toFixed(2)} units).`,
-      type: 'Success',
-      read: false
-    });
+    // 2. Track Event (Updates Activity, Notification, clears cache)
+    await trackEvent(
+      req.user._id,
+      'INVESTMENT_ADDED',
+      'Investment Successful',
+      `You successfully invested ₹${Number(amount).toLocaleString()} in ${fundName} (${units.toFixed(2)} units).`,
+      'Success'
+    );
 
     res.status(201).json(investment);
   } catch (error) {

@@ -1,4 +1,5 @@
 const Nominee = require('../models/Nominee');
+const { trackEvent } = require('../services/eventService');
 
 const getNominees = async (req, res) => {
   try {
@@ -48,6 +49,14 @@ const createNominee = async (req, res) => {
       email,
       share
     });
+
+    await trackEvent(
+      req.user._id,
+      'NOMINEE_ADDED',
+      'Nominee Added',
+      `You successfully added ${name} as a nominee.`,
+      'Success'
+    );
 
     res.status(201).json(nominee);
   } catch (error) {

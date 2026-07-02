@@ -1,8 +1,10 @@
 const User = require('../models/User');
 const Portfolio = require('../models/Portfolio');
+const Investment = require('../models/Investment');
 const SIP = require('../models/SIP');
 const Nominee = require('../models/Nominee');
 const Notification = require('../models/Notification');
+const Activity = require('../models/Activity');
 const Request = require('../models/Request');
 const { calculateHealthScore } = require('../services/healthScoreService');
 
@@ -19,16 +21,26 @@ const getDashboardData = async (req, res) => {
     }
 
     // Run lookups concurrently using Promise.all & lean() for speed
-    const [portfolio, sips, user, nominees, unreadNotifications] = await Promise.all([
+    const [portfolio, investments, sips, user, nominees, unreadNotifications, notifications, activities] = await Promise.all([
       Portfolio.findOne({ userId }).lean(),
+      Investment.find({ userId }).lean(),
       SIP.find({ userId }).lean(),
       User.findById(userId).lean(),
       Nominee.find({ userId: req.user._id }).lean(),
-      Notification.countDocuments({ userId, read: false })
+      Notification.countDocuments({ userId, read: false }),
+      Notification.find({ userId }).sort({ createdAt: -1 }).limit(4).lean(),
+      Activity.find({ userId }).sort({ createdAt: -1 }).limit(5).lean()
     ]);
 
     const portfolioSnapshot = portfolio || { totalValue: 0, todayChange: 0, allocation: { equity: 0, debt: 0, liquid: 0 } };
-    const healthScore = calculateHealthScore(req.user, sips, nominees);
+    
+    // Compute invested amount and gains
+    const investedAmount = investments.reduce((sum, inv) => sum + inv.amount, 0);
+    const currentValue = portfolioSnapshot.totalValue;
+    const totalGain = currentValue - investedAmount;
+    const overallReturn = investedAmount > 0 ? ((totalGain / investedAmount) * 100).toFixed(2) : 0;
+
+    const healthScore = calculateHealthScore(req.user, sips, nominees, investments);
 
     const sipDetails = {
       totalActiveSIPs: sips.filter(s => s.status === 'Active').length,
@@ -105,22 +117,28 @@ const getDashboardData = async (req, res) => {
     }
 
     const finalInsights = insights.slice(0, 3);
-
-    const recentActivity = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(5).lean();
-
     const nextSip = sips.find(s => s.status === 'Active') || null;
 
     const dashboardData = {
-      portfolio: portfolioSnapshot,
+      portfolio: {
+        ...portfolioSnapshot,
+        investedAmount,
+        totalGain,
+        overallReturn
+      },
       nextSip,
       kycStatus: user.kycStatus,
       healthScore,
-      recentActivity,
+      recentActivity: activities,
+      notifications,
       insights: finalInsights,
       onboarding: {
+        name: !!user.name,
+        email: !!user.email,
+        phone: !!user.mobile,
         kycCompleted: user.kycStatus === 'Approved',
         nomineeAdded: nominees.length > 0,
-        investmentAdded: portfolioSnapshot.totalValue > 0,
+        investmentAdded: investments.length > 0,
         sipCreated: sips.length > 0
       }
     };

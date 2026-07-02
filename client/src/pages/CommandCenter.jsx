@@ -101,20 +101,37 @@ const CommandCenter = () => {
     }
   }, [data]);
 
-  // Asset allocation matching the user requirement
-  const chartData = useMemo(() => [
-    { name: 'Equity', value: 65, color: '#0F766E' }, // Teal
-    { name: 'Debt', value: 25, color: '#6366F1' }, // Indigo
-    { name: 'Gold', value: 10, color: '#F59E0B' } // Amber
-  ], []);
+  const chartData = useMemo(() => {
+    if (!data?.portfolio?.allocation) return [];
+    return [
+      { name: 'Equity', value: data.portfolio.allocation.equity || 0, color: '#0F766E' },
+      { name: 'Debt', value: data.portfolio.allocation.debt || 0, color: '#6366F1' },
+      { name: 'Liquid', value: data.portfolio.allocation.liquid || 0, color: '#F59E0B' }
+    ].filter(a => a.value > 0);
+  }, [data]);
 
   const completedCount = data?.onboarding
-    ? (data.onboarding.kycCompleted ? 1 : 0) +
+    ? (data.onboarding.name ? 1 : 0) +
+      (data.onboarding.email ? 1 : 0) +
+      (data.onboarding.phone ? 1 : 0) +
+      (data.onboarding.kycCompleted ? 1 : 0) +
       (data.onboarding.nomineeAdded ? 1 : 0) +
       (data.onboarding.investmentAdded ? 1 : 0) +
       (data.onboarding.sipCreated ? 1 : 0)
     : 0;
-  const percentComplete = (completedCount / 4) * 100;
+  const percentComplete = Math.round((completedCount / 7) * 100);
+
+  const diversificationScore = useMemo(() => {
+    if (!data?.portfolio?.allocation) return 0;
+    const { equity = 0, debt = 0, liquid = 0 } = data.portfolio.allocation;
+    // Perfect score if spread evenly. Deduct points for heavy concentration
+    let score = 100;
+    if (equity > 70) score -= 20;
+    else if (equity < 30) score -= 10;
+    if (debt < 10) score -= 10;
+    if (liquid < 5) score -= 10;
+    return Math.max(0, score);
+  }, [data]);
 
   if (loading) return (
     <div className="animate-pulse space-y-6">
@@ -165,18 +182,17 @@ const CommandCenter = () => {
             
             {/* Summary Story */}
             <div className="space-y-2 text-white/80 text-sm font-medium border-l-2 border-teal-500/50 pl-4 mt-6">
-              <p className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Everything looks good today.
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-teal-400"></span>
-                Your next SIP is due tomorrow.
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                No critical actions pending.
-              </p>
+              {data.insights && data.insights.length > 0 ? (
+                <p className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${data.insights[0].type === 'error' ? 'bg-rose-500' : data.insights[0].type === 'warning' ? 'bg-amber-500' : 'bg-teal-400'}`}></span>
+                  {data.insights[0].title} - {data.insights[0].message}
+                </p>
+              ) : (
+                <p className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Everything looks good today. No critical actions pending.
+                </p>
+              )}
             </div>
           </div>
           
@@ -185,8 +201,9 @@ const CommandCenter = () => {
             <h2 className="text-5xl font-mono font-bold tracking-tight">
               ₹{animatedValue.toLocaleString()}
             </h2>
-            <p className="text-emerald-400 font-mono font-medium text-sm flex items-center bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm shadow-inner">
-              <ArrowUpRight className="w-4 h-4 mr-1" /> +₹4,250 This Month
+            <p className={`${data.portfolio.todayChange >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-mono font-medium text-sm flex items-center bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm shadow-inner`}>
+              {data.portfolio.todayChange >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />} 
+              {data.portfolio.todayChange >= 0 ? '+' : '-'}₹{Math.abs(data.portfolio.todayChange).toLocaleString()} Today
             </p>
           </div>
         </div>
@@ -351,11 +368,11 @@ const CommandCenter = () => {
           <div className="space-y-2 border-t border-gray-50 pt-4 flex-1">
             <p className="text-[11px] font-bold text-navy-400 uppercase tracking-wider mb-2">Health Drivers</p>
             <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-navy-700">
-              <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" /> KYC Verified</div>
-              <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" /> Active SIP</div>
-              <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" /> Nominee Added</div>
-              <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" /> Profile Complete</div>
-              <div className="flex items-center gap-1.5 col-span-2"><CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" /> Zero Pending Requests</div>
+              <div className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 shrink-0 ${data.onboarding.kycCompleted ? 'text-emerald-500' : 'text-gray-300'}`} /> KYC Verified</div>
+              <div className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 shrink-0 ${data.onboarding.sipCreated ? 'text-emerald-500' : 'text-gray-300'}`} /> Active SIP</div>
+              <div className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 shrink-0 ${data.onboarding.nomineeAdded ? 'text-emerald-500' : 'text-gray-300'}`} /> Nominee Added</div>
+              <div className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 shrink-0 ${percentComplete === 100 ? 'text-emerald-500' : 'text-gray-300'}`} /> Profile Complete</div>
+              <div className="flex items-center gap-1.5 col-span-2"><CheckCircle className={`w-4 h-4 shrink-0 ${data.onboarding.investmentAdded ? 'text-emerald-500' : 'text-gray-300'}`} /> Investments Started</div>
             </div>
           </div>
         </div>
@@ -367,25 +384,28 @@ const CommandCenter = () => {
           <div className="space-y-4 flex-1 flex flex-col justify-center">
             <div>
               <p className="text-navy-400 text-xs font-bold uppercase tracking-wider mb-0.5">Portfolio Value</p>
-              <h4 className="text-3xl font-mono font-bold text-navy-900">₹5,00,000</h4>
+              <h4 className="text-3xl font-mono font-bold text-navy-900">₹{data.portfolio.totalValue.toLocaleString()}</h4>
             </div>
 
             <div className="grid grid-cols-2 gap-4 border-t border-gray-50 pt-4">
               <div>
                 <p className="text-navy-400 text-xs font-bold uppercase tracking-wider mb-0.5">Today's Gain</p>
-                <p className="text-sm font-mono font-bold text-emerald-500 flex items-center">
-                  <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 shrink-0" /> +₹820
+                <p className={`${data.portfolio.todayChange >= 0 ? 'text-emerald-500' : 'text-rose-500'} text-sm font-mono font-bold flex items-center`}>
+                  {data.portfolio.todayChange >= 0 ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 shrink-0" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 shrink-0" />} 
+                  {data.portfolio.todayChange >= 0 ? '+' : '-'}₹{Math.abs(data.portfolio.todayChange).toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-navy-400 text-xs font-bold uppercase tracking-wider mb-0.5">Overall Return</p>
-                <p className="text-sm font-mono font-bold text-emerald-500">+12%</p>
+                <p className={`${data.portfolio.overallReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'} text-sm font-mono font-bold flex items-center`}>
+                  {data.portfolio.overallReturn >= 0 ? '+' : ''}{data.portfolio.overallReturn}%
+                </p>
               </div>
             </div>
 
             <div className="bg-navy-50 rounded-xl p-3 border border-gray-100/50 mt-2">
               <p className="text-navy-500 text-xs font-bold uppercase tracking-wider mb-0.5">Invested Amount</p>
-              <p className="text-lg font-mono font-bold text-navy-800">₹4,46,000</p>
+              <p className="text-lg font-mono font-bold text-navy-800">₹{data.portfolio.investedAmount.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -394,34 +414,36 @@ const CommandCenter = () => {
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-outfit font-bold text-lg text-navy-900">Profile Completion</h3>
-            <span className="text-lg font-mono font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">88%</span>
+            <span className="text-lg font-mono font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">{percentComplete}%</span>
           </div>
 
           <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-4">
-            <div className="bg-teal-600 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: '88%' }}></div>
+            <div className="bg-teal-600 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${percentComplete}%` }}></div>
           </div>
 
           <div className="space-y-2 flex-1">
             <div className="flex items-center justify-between text-xs font-semibold text-navy-700">
-              <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500" /> Personal Details</span>
-              <span className="text-navy-400">Complete</span>
+              <span className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 ${data.onboarding.name && data.onboarding.email && data.onboarding.phone ? 'text-emerald-500' : 'text-gray-300'}`} /> Personal Details</span>
+              <span className={data.onboarding.name && data.onboarding.email && data.onboarding.phone ? "text-navy-400" : "text-amber-500"}>{data.onboarding.name && data.onboarding.email && data.onboarding.phone ? "Complete" : "Pending"}</span>
             </div>
             <div className="flex items-center justify-between text-xs font-semibold text-navy-700">
-              <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500" /> KYC Verification</span>
-              <span className="text-navy-400">Verified</span>
+              <span className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 ${data.onboarding.kycCompleted ? 'text-emerald-500' : 'text-gray-300'}`} /> KYC Verification</span>
+              <span className={data.onboarding.kycCompleted ? "text-navy-400" : "text-amber-500"}>{data.onboarding.kycCompleted ? "Verified" : "Pending"}</span>
             </div>
             <div className="flex items-center justify-between text-xs font-semibold text-navy-700">
-              <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500" /> Bank Integration</span>
-              <span className="text-navy-400">Connected</span>
+              <span className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 ${data.onboarding.investmentAdded ? 'text-emerald-500' : 'text-gray-300'}`} /> First Investment</span>
+              <span className={data.onboarding.investmentAdded ? "text-navy-400" : "text-amber-500"}>{data.onboarding.investmentAdded ? "Completed" : "Pending"}</span>
             </div>
             <div className="flex items-center justify-between text-xs font-semibold text-navy-700">
-              <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-500" /> Active Auto SIP</span>
-              <span className="text-navy-400">Active</span>
+              <span className="flex items-center gap-1.5"><CheckCircle className={`w-4 h-4 ${data.onboarding.sipCreated ? 'text-emerald-500' : 'text-gray-300'}`} /> Active Auto SIP</span>
+              <span className={data.onboarding.sipCreated ? "text-navy-400" : "text-amber-500"}>{data.onboarding.sipCreated ? "Active" : "Pending"}</span>
             </div>
-            <div className="flex items-center justify-between text-xs font-semibold text-navy-700 border-t border-gray-50 pt-2">
-              <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4 text-amber-500" /> Nominee Missing</span>
-              <Link to="/nominee" className="text-teal-600 hover:text-teal-700 font-bold underline">Add Nominee</Link>
-            </div>
+            {!data.onboarding.nomineeAdded && (
+              <div className="flex items-center justify-between text-xs font-semibold text-navy-700 border-t border-gray-50 pt-2">
+                <span className="flex items-center gap-1.5"><AlertCircle className="w-4 h-4 text-amber-500" /> Nominee Missing</span>
+                <Link to="/nominee" className="text-teal-600 hover:text-teal-700 font-bold underline">Add Nominee</Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -476,9 +498,11 @@ const CommandCenter = () => {
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-navy-400 uppercase tracking-widest">Diversification Score</p>
-                  <p className="font-bold text-navy-900 text-sm">Healthy Allocation</p>
+                  <p className={`font-bold text-sm ${data?.portfolio?.allocation?.equity > 70 ? 'text-amber-500' : 'text-navy-900'}`}>
+                    {data?.portfolio?.allocation?.equity > 70 ? 'Rebalance Suggested' : 'Healthy Allocation'}
+                  </p>
                 </div>
-                <span className="text-xl font-mono font-black text-teal-600">84%</span>
+                <span className={`text-xl font-mono font-black ${diversificationScore >= 80 ? 'text-teal-600' : 'text-amber-500'}`}>{diversificationScore}%</span>
               </div>
             </div>
           </div>
@@ -489,94 +513,47 @@ const CommandCenter = () => {
           <h3 className="font-outfit font-bold text-lg text-navy-900 mb-4">What's New</h3>
           
           <div className="space-y-3 flex-1">
-            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5 animate-pulse" />
-              <div>
-                <p className="text-xs font-bold text-navy-900">Statement Generated</p>
-                <p className="text-[10px] text-navy-500">June mutual fund statement is ready.</p>
+            {data.notifications && data.notifications.length > 0 ? data.notifications.map((notif, index) => (
+              <div key={index} className={`flex items-start gap-3 p-2.5 rounded-xl ${notif.type === 'Error' || notif.type === 'Alert' ? 'bg-rose-50/50 border border-rose-100/50' : notif.type === 'Warning' || notif.type === 'Reminder' ? 'bg-amber-50/50 border border-amber-100/50' : 'bg-emerald-50/50 border border-emerald-100/50'}`}>
+                {notif.type === 'Error' || notif.type === 'Alert' ? <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" /> : notif.type === 'Warning' || notif.type === 'Reminder' ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> : <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />}
+                <div>
+                  <p className="text-xs font-bold text-navy-900">{notif.title}</p>
+                  <p className="text-[10px] text-navy-500">{notif.message}</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-navy-900">KYC Approved</p>
-                <p className="text-[10px] text-navy-500">Your address proof verified.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-amber-50/50 border border-amber-100/50 animate-pulse">
-              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-navy-900">SIP Retry Required</p>
-                <p className="text-[10px] text-navy-500">Your SBI SIP mandate failed to auto-debit.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-navy-900">Support Ticket Resolved</p>
-                <p className="text-[10px] text-navy-500">Ticket #2034 closed successfully.</p>
-              </div>
-            </div>
+            )) : (
+              <div className="text-sm text-navy-400">No new updates.</div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 4. Action Center (Renamed and Styled with Amber Borders/Accents) */}
+      {/* 4. Action Center */}
       <div className="space-y-4">
         <h3 className="font-outfit font-bold text-xl text-navy-900 mb-2 px-1 flex items-center gap-2">
           <Zap className="w-5 h-5 text-amber-500" /> Action Center
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Action 1 (Amber Attention) */}
-          <div className="bg-gradient-to-r from-amber-50 to-white rounded-3xl p-5 border-l-4 border-l-[#F59E0B] border-y border-r border-amber-100 hover:shadow-md transition-all duration-300 group flex flex-col justify-between hover:-translate-y-1">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white rounded-lg shadow-sm text-amber-500">
-                  <AlertCircle className="w-5 h-5" />
+          {data.insights && data.insights.length > 0 ? data.insights.map((insight, index) => (
+            <div key={index} className={`bg-gradient-to-r ${insight.type === 'error' ? 'from-rose-50 border-l-[#F43F5E]' : insight.type === 'warning' ? 'from-amber-50 border-l-[#F59E0B]' : 'from-teal-50 border-l-[#0F766E]'} to-white rounded-3xl p-5 border-l-4 border-y border-r border-gray-100 hover:shadow-md transition-all duration-300 group flex flex-col justify-between hover:-translate-y-1`}>
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-2 bg-white rounded-lg shadow-sm ${insight.type === 'error' ? 'text-rose-500' : insight.type === 'warning' ? 'text-amber-500' : 'text-teal-600'}`}>
+                    {insight.type === 'error' ? <AlertCircle className="w-5 h-5" /> : insight.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                  </div>
+                  <h4 className="font-bold text-navy-900 font-outfit text-sm">{insight.title}</h4>
                 </div>
-                <h4 className="font-bold text-navy-900 font-outfit text-sm">SIP due tomorrow</h4>
+                <p className="text-xs font-medium text-navy-600">{insight.message}</p>
               </div>
-              <p className="text-xs font-medium text-navy-600">Please make sure linked bank account balance is maintained to avoid failure.</p>
+              <Link to={insight.link} className={`inline-flex items-center justify-between w-full px-4 py-2 rounded-xl text-xs font-bold ${insight.type === 'error' ? 'bg-rose-100 text-rose-800 hover:bg-rose-200' : insight.type === 'warning' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-teal-100 text-teal-800 hover:bg-teal-200'} transition-colors`}>
+                Take Action <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
-            <Link to="/sip" className="inline-flex items-center justify-between w-full px-4 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
-              Complete today <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-
-          {/* Action 2 */}
-          <div className="bg-gradient-to-r from-teal-50 to-white rounded-3xl p-5 border-l-4 border-l-[#0F766E] border-y border-r border-teal-100 hover:shadow-md transition-all duration-300 group flex flex-col justify-between hover:-translate-y-1">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white rounded-lg shadow-sm text-teal-600">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-navy-900 font-outfit text-sm">Statement Ready</h4>
-              </div>
-              <p className="text-xs font-medium text-navy-600">Your Consolidated Account Statement for the previous quarter is generated.</p>
+          )) : (
+            <div className="col-span-3 text-center p-8 bg-gray-50 rounded-3xl border border-dashed border-gray-200 text-navy-500 text-sm font-medium">
+              You're all caught up! No pending actions required.
             </div>
-            <Link to="/statements" className="inline-flex items-center justify-between w-full px-4 py-2 rounded-xl text-xs font-bold bg-teal-100 text-teal-800 hover:bg-teal-200 transition-colors">
-              Download <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-
-          {/* Action 3 (Amber Attention) */}
-          <div className="bg-gradient-to-r from-amber-50 to-white rounded-3xl p-5 border-l-4 border-l-[#F59E0B] border-y border-r border-amber-100 hover:shadow-md transition-all duration-300 group flex flex-col justify-between hover:-translate-y-1">
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white rounded-lg shadow-sm text-amber-500">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-navy-900 font-outfit text-sm">Add Nominee</h4>
-              </div>
-              <p className="text-xs font-medium text-navy-600">Secure your investments by adding a nominee. This will improve your Health Score.</p>
-            </div>
-            <Link to="/nominee" className="inline-flex items-center justify-between w-full px-4 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
-              Improve Health Score <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+          )}
         </div>
       </div>
 
@@ -588,43 +565,26 @@ const CommandCenter = () => {
           <h3 className="font-outfit font-bold text-lg text-navy-900 mb-6">Recent Activity</h3>
           
           <div className="space-y-6">
-            <div>
-              <h4 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-3">Today</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><CheckCircle className="w-4 h-4" /></div>
-                  <span className="font-semibold text-navy-800 text-xs flex-1">Statement Downloaded</span>
-                  <span className="text-[10px] text-navy-400">10:45 AM</span>
-                </div>
-                <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><CheckCircle className="w-4 h-4" /></div>
-                  <span className="font-semibold text-navy-800 text-xs flex-1">KYC Submitted</span>
-                  <span className="text-[10px] text-navy-400">09:15 AM</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-50 pt-4">
-              <h4 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-3">Yesterday</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 border border-rose-100"><AlertTriangle className="w-4 h-4" /></div>
-                  <span className="font-semibold text-navy-800 text-xs flex-1">SIP Failed</span>
-                  <span className="text-[10px] text-navy-400">Yesterday</span>
+            {Object.keys(groupedActivity).length > 0 ? Object.keys(groupedActivity).map(dateLabel => (
+              <div key={dateLabel} className="border-t border-gray-50 pt-4 first:border-0 first:pt-0">
+                <h4 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-3">{dateLabel}</h4>
+                <div className="space-y-3">
+                  {groupedActivity[dateLabel].map((act, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${act.type === 'Error' ? 'bg-rose-50 text-rose-500 border-rose-100' : act.type === 'Warning' ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                        {act.type === 'Error' ? <AlertCircle className="w-4 h-4" /> : act.type === 'Warning' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                      </div>
+                      <span className="font-semibold text-navy-800 text-xs flex-1">{act.title}</span>
+                      <span className="text-[10px] text-navy-400">
+                        {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-
-            <div className="border-t border-gray-50 pt-4">
-              <h4 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-3">Monday</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><UserPlus className="w-4 h-4" /></div>
-                  <span className="font-semibold text-navy-800 text-xs flex-1">Nominee Updated</span>
-                  <span className="text-[10px] text-navy-400">Monday</span>
-                </div>
-              </div>
-            </div>
+            )) : (
+              <div className="text-sm text-navy-400">No recent activity.</div>
+            )}
           </div>
         </div>
 

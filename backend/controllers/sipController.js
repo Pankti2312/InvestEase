@@ -1,6 +1,6 @@
 const SIP = require('../models/SIP');
 const Notification = require('../models/Notification');
-const { clearDashboardCache } = require('./dashboardController');
+const { trackEvent } = require('../services/eventService');
 
 const getSIPs = async (req, res) => {
   try {
@@ -74,17 +74,14 @@ const createSIP = async (req, res) => {
       failureReason: 'None'
     });
 
-    // Evict cache
-    clearDashboardCache(req.user._id);
-
-    // Create Notification event (Event Chain Module 5)
-    await Notification.create({
-      userId: req.user._id,
-      title: 'SIP Registered',
-      message: `Your Systematic Investment Plan of ₹${Number(amount).toLocaleString()} for ${fundName} has been successfully registered.`,
-      type: 'Success',
-      read: false
-    });
+    // Track Event (Updates Activity, Notification, clears cache)
+    await trackEvent(
+      req.user._id,
+      'SIP_CREATED',
+      'SIP Registered',
+      `Your Systematic Investment Plan of ₹${Number(amount).toLocaleString()} for ${fundName} has been successfully registered.`,
+      'Success'
+    );
 
     res.status(201).json(sip);
   } catch (error) {

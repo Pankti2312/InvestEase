@@ -1,5 +1,6 @@
 const KYC = require('../models/KYC');
 const User = require('../models/User');
+const { trackEvent } = require('../services/eventService');
 
 const fileStorage = require('../services/fileStorage');
 
@@ -40,6 +41,15 @@ const uploadKYCDocuments = async (req, res) => {
     }
 
     await User.findByIdAndUpdate(req.user._id, { kycStatus: 'Submitted' });
+
+    await trackEvent(
+      req.user._id,
+      'KYC_SUBMITTED',
+      'KYC Submitted',
+      'Your KYC documents have been successfully submitted and are under review.',
+      'Info'
+    );
+
 
     res.status(201).json(kycRecord);
   } catch (error) {
@@ -102,6 +112,25 @@ const updateKYCStatus = async (req, res) => {
     if (status === 'Rejected') userKycStatus = 'Rejected';
 
     await User.findByIdAndUpdate(kycRecord.userId, { kycStatus: userKycStatus });
+
+    if (status === 'Approved') {
+      await trackEvent(
+        kycRecord.userId,
+        'KYC_APPROVED',
+        'KYC Approved',
+        'Your identity documents have been successfully verified.',
+        'Success'
+      );
+    } else if (status === 'Rejected') {
+      await trackEvent(
+        kycRecord.userId,
+        'KYC_REJECTED',
+        'KYC Rejected',
+        `Your KYC was rejected. Reason: ${kycRecord.rejectionReason}`,
+        'Error'
+      );
+    }
+
 
     res.json(kycRecord);
   } catch (error) {
