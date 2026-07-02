@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import api from '../services/api';
 import { Check, X, FileText, MessageSquare, AlertCircle, Zap, Settings } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -84,7 +85,7 @@ const Admin = () => {
 
   if (user?.role !== 'admin') return <Navigate to="/" replace />;
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6 pb-12">

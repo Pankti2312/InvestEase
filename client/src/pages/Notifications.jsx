@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, CheckCircle, AlertCircle, Info, Clock, Check } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
 // Central lookup configuration for notification icons and styling
@@ -70,7 +71,7 @@ const Notifications = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) return <div>Loading notifications...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

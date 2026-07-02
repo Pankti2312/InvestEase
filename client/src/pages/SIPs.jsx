@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, AlertTriangle, RefreshCcw, CreditCard, LifeBuoy, Calendar, DollarSign } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
 const SIPs = () => {
@@ -66,7 +67,7 @@ const SIPs = () => {
     alert('Redirecting to your bank\'s secure mandate portal... (This is a mock action)');
   };
 
-  if (loading) return <div>Loading your Systematic Investment Plans...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6">

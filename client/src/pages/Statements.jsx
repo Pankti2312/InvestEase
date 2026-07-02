@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Download, AlertCircle } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -71,7 +72,7 @@ const Statements = () => {
     }
   };
 
-  if (loading) return <div>Loading statements...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6">

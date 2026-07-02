@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
 const KYC = () => {
@@ -57,7 +58,7 @@ const KYC = () => {
     }
   };
 
-  if (loading) return <div>Loading KYC status...</div>;
+  if (loading) return <TableSkeleton />;
 
   const currentStatus = kycData?.status || 'Pending';
   

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
 const Nominee = () => {
@@ -134,7 +135,7 @@ const Nominee = () => {
     }
   };
 
-  if (loading) return <div>Loading nominees...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6">

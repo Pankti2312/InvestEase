@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
+import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
 const Profile = () => {
@@ -66,7 +67,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <div>Loading profile...</div>;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
