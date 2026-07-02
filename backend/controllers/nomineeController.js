@@ -12,8 +12,25 @@ const getNominees = async (req, res) => {
 const createNominee = async (req, res) => {
   const { name, relationship, dob, mobile, email, share } = req.body;
 
+  // Contact validation patterns
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^[0-9]{10}$/; // 10-digit number
+
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: 'Invalid email format.' });
+  }
+  if (!phoneRegex.test(mobile)) {
+    return res.status(400).json({ message: 'Invalid phone format (must be 10 digits).' });
+  }
+
   try {
     const existingNominees = await Nominee.find({ userId: req.user._id });
+
+    // Enforce max 3 nominees per user
+    if (existingNominees.length >= 3) {
+      return res.status(400).json({ message: 'Maximum of 3 nominees can be added per account.' });
+    }
+
     const currentTotalShare = existingNominees.reduce((sum, nom) => sum + nom.share, 0);
 
     if (currentTotalShare + Number(share) > 100) {
@@ -40,6 +57,17 @@ const createNominee = async (req, res) => {
 
 const updateNominee = async (req, res) => {
   const { name, relationship, dob, mobile, email, share } = req.body;
+
+  // Contact validation patterns
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^[0-9]{10}$/; // 10-digit number
+
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: 'Invalid email format.' });
+  }
+  if (!phoneRegex.test(mobile)) {
+    return res.status(400).json({ message: 'Invalid phone format (must be 10 digits).' });
+  }
 
   try {
     const existingNominees = await Nominee.find({ userId: req.user._id });

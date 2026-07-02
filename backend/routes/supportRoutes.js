@@ -1,16 +1,8 @@
 const express = require('express');
 const { getRequests, createRequest, getAdminRequests, updateRequestStatus } = require('../controllers/supportController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-
-const adminOnly = async (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(401).json({ message: 'Not authorized as an admin' });
-  }
-};
 
 router.route('/')
   .get(protect, getRequests)

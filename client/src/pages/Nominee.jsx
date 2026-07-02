@@ -78,16 +78,40 @@ const Nominee = () => {
       return;
     }
 
+    // Save previous list for rollback
+    const previousNominees = [...nominees];
+
+    // Build optimistic nominee
+    const optimisticNominee = {
+      _id: editingId || `temp-${Math.random().toString()}`,
+      name: formData.name,
+      relationship: formData.relationship,
+      dob: formData.dob,
+      mobile: formData.mobile,
+      email: formData.email,
+      share: Number(formData.share)
+    };
+
+    // Optimistically update UI
+    if (editingId) {
+      setNominees(nominees.map(n => n._id === editingId ? optimisticNominee : n));
+    } else {
+      setNominees([...nominees, optimisticNominee]);
+    }
+    
+    setShowModal(false);
+
     try {
       if (editingId) {
         await api.put(`/nominees/${editingId}`, formData);
       } else {
         await api.post('/nominees', formData);
       }
-      setShowModal(false);
-      fetchNominees();
+      fetchNominees(); // Sync with server database values
     } catch (err) {
-      setError(err.response?.data?.message || 'Error saving nominee');
+      // Rollback to previous state on failure
+      setNominees(previousNominees);
+      alert(err.response?.data?.message || 'Error saving nominee');
     } finally {
       setSubmitting(false);
     }
@@ -95,11 +119,17 @@ const Nominee = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to remove this nominee?')) {
+      const previousNominees = [...nominees];
+      
+      // Optimistically remove from state
+      setNominees(nominees.filter(n => n._id !== id));
+
       try {
         await api.delete(`/nominees/${id}`);
-        fetchNominees();
       } catch (err) {
-        console.error(err);
+        // Rollback on error
+        setNominees(previousNominees);
+        alert(err.response?.data?.message || 'Failed to delete nominee');
       }
     }
   };

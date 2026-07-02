@@ -2,6 +2,16 @@ import { useState, useEffect } from 'react';
 import { Bell, CheckCircle, AlertCircle, Info, Clock, Check } from 'lucide-react';
 import api from '../services/api';
 
+// Central lookup configuration for notification icons and styling
+const notificationConfig = {
+  Action: { bg: 'bg-red-50', text: 'text-red-500', icon: AlertCircle },
+  Reminder: { bg: 'bg-yellow-50', text: 'text-yellow-500', icon: Clock },
+  Success: { bg: 'bg-green-50', text: 'text-green-500', icon: CheckCircle },
+  Info: { bg: 'bg-blue-50', text: 'text-blue-500', icon: Info },
+  Alert: { bg: 'bg-rose-50', text: 'text-rose-500', icon: AlertCircle },
+  default: { bg: 'bg-navy-50', text: 'text-navy-500', icon: Bell }
+};
+
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,42 +33,34 @@ const Notifications = () => {
   };
 
   const markAsRead = async (id) => {
+    const previousNotifications = [...notifications];
+
+    // Optimistically update the UI immediately
+    setNotifications(notifications.map(n => 
+      n._id === id ? { ...n, read: true } : n
+    ));
+
     try {
       await api.put(`/notifications/${id}/read`);
-      setNotifications(notifications.map(n => 
-        n._id === id ? { ...n, read: true } : n
-      ));
     } catch (error) {
-      console.error(error);
+      // Rollback on failure
+      setNotifications(previousNotifications);
+      console.error('Failed to mark notification as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
+    const previousNotifications = [...notifications];
+
+    // Optimistically update the UI immediately
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+
     try {
       await api.put('/notifications/read-all');
-      setNotifications(notifications.map(n => ({ ...n, read: true })));
     } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'Action': return <AlertCircle className="w-5 h-5 text-red-500" />;
-      case 'Reminder': return <Clock className="w-5 h-5 text-yellow-500" />;
-      case 'Success': return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'Info': return <Info className="w-5 h-5 text-blue-500" />;
-      default: return <Bell className="w-5 h-5 text-navy-500" />;
-    }
-  };
-
-  const getBgColor = (type) => {
-    switch (type) {
-      case 'Action': return 'bg-red-50';
-      case 'Reminder': return 'bg-yellow-50';
-      case 'Success': return 'bg-green-50';
-      case 'Info': return 'bg-blue-50';
-      default: return 'bg-navy-50';
+      // Rollback on failure
+      setNotifications(previousNotifications);
+      console.error('Failed to mark all as read:', error);
     }
   };
 
@@ -118,9 +120,15 @@ const Notifications = () => {
                 key={notification._id} 
                 className={`p-4 hover:bg-navy-50/50 transition-colors flex gap-4 ${!notification.read ? 'bg-white' : 'bg-gray-50/50 opacity-80'}`}
               >
-                <div className={`mt-1 shrink-0 p-2 rounded-full h-fit ${getBgColor(notification.type)}`}>
-                  {getIcon(notification.type)}
-                </div>
+                {(() => {
+                  const cfg = notificationConfig[notification.type] || notificationConfig.default;
+                  const Icon = cfg.icon;
+                  return (
+                    <div className={`mt-1 shrink-0 p-2 rounded-full h-fit ${cfg.bg}`}>
+                      <Icon className={`w-5 h-5 ${cfg.text}`} />
+                    </div>
+                  );
+                })()}
                 
                 <div className="flex-1">
                   <div className="flex justify-between items-start">

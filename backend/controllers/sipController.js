@@ -9,6 +9,17 @@ const getSIPs = async (req, res) => {
   }
 };
 
+const calculateNextDebit = (frequency, lastDebitDate = new Date()) => {
+  const nextDate = new Date(lastDebitDate);
+  if (frequency === 'Weekly') {
+    nextDate.setDate(nextDate.getDate() + 7);
+  } else {
+    // Default to Monthly
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+  return nextDate;
+};
+
 const retrySIP = async (req, res) => {
   try {
     const sip = await SIP.findById(req.params.id);
@@ -27,12 +38,10 @@ const retrySIP = async (req, res) => {
 
     // Simulate successful retry
     sip.status = 'Active';
-    sip.failureReason = undefined;
+    sip.failureReason = 'None';
     
-    // Advance next debit date by 1 month
-    const nextDate = new Date(sip.nextDebit);
-    nextDate.setMonth(nextDate.getMonth() + 1);
-    sip.nextDebit = nextDate;
+    // Dynamically calculate next debit date server-side
+    sip.nextDebit = calculateNextDebit(sip.frequency, new Date());
 
     await sip.save();
 

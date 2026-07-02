@@ -25,7 +25,7 @@ const createRequest = async (req, res) => {
 
 const getAdminRequests = async (req, res) => {
   try {
-    const requests = await Request.find().populate('userId', 'name email').sort({ createdAt: -1 });
+    const requests = await Request.find().populate('userId', 'name email').sort({ createdAt: 1 });
     res.json(requests);
   } catch (error) {
     res.status(500).json({ message: error.message });

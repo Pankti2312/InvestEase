@@ -18,17 +18,27 @@ const generateStatement = async (req, res) => {
   const { month, year } = req.body;
 
   try {
-    // Check if statement already exists
+    // Cache check: return existing statement details instead of regenerating or returning 400
     const existingStatement = await Statement.findOne({ userId: req.user._id, month, year });
     if (existingStatement) {
-      return res.status(400).json({ message: 'Statement for this month and year already exists.' });
+      return res.json(existingStatement);
     }
 
-    const portfolio = await Portfolio.findOne({ userId: req.user._id });
+    let portfolio = await Portfolio.findOne({ userId: req.user._id });
     const sips = await SIP.find({ userId: req.user._id });
 
     if (!portfolio) {
-      return res.status(404).json({ message: 'Portfolio not found to generate statement.' });
+      // Auto-create a default empty portfolio document on the fly so statement generation succeeds
+      portfolio = await Portfolio.create({
+        userId: req.user._id,
+        totalValue: 0,
+        todayChange: 0,
+        allocation: {
+          equity: 0,
+          debt: 0,
+          liquid: 0
+        }
+      });
     }
 
     const dir = 'uploads/statements/';
@@ -132,7 +142,35 @@ const generateStatement = async (req, res) => {
   }
 };
 
+const downloadStatement = async (req, res) => {
+  try {
+    const statement = await Statement.findById(req.params.id);
+    if (!statement) {
+      return res.status(404).json({ message: 'Statement not found.' });
+    }
+
+    if (statement.userId.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'Not authorized to access this statement.' });
+    }
+
+    const filepath = path.join(__dirname, '..', statement.pdfUrl);
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ message: 'Statement file not found on disk.' });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(filepath)}"`);
+
+    // Stream the PDF response rather than buffering in memory
+    const fileStream = fs.createReadStream(filepath);
+    fileStream.pipe(res);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getStatements,
-  generateStatement
+  generateStatement,
+  downloadStatement
 };

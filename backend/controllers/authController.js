@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const Portfolio = require('../models/Portfolio');
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -29,6 +30,18 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      // Auto-create a default empty portfolio document in the database
+      await Portfolio.create({
+        userId: user._id,
+        totalValue: 0,
+        todayChange: 0,
+        allocation: {
+          equity: 0,
+          debt: 0,
+          liquid: 0
+        }
+      });
+
       res.status(201).json({
         _id: user._id,
         name: user.name,

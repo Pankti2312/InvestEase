@@ -23,16 +23,25 @@ const Portfolio = () => {
     fetchPortfolio();
   }, []);
 
+  const chartData = useMemo(() => {
+    if (!data || !data.portfolio) {
+      return [
+        { name: 'Equity', value: 0, color: '#0F766E' },
+        { name: 'Debt', value: 0, color: '#6366F1' },
+        { name: 'Liquid', value: 0, color: '#F59E0B' }
+      ];
+    }
+    return [
+      { name: 'Equity', value: data.portfolio.allocation.equity, color: '#0F766E' },
+      { name: 'Debt', value: data.portfolio.allocation.debt, color: '#6366F1' },
+      { name: 'Liquid', value: data.portfolio.allocation.liquid, color: '#F59E0B' }
+    ];
+  }, [data]);
+
   if (loading) return <TableSkeleton />;
   if (!data) return <div className="text-center p-8 text-navy-500">Failed to load portfolio.</div>;
 
   const { portfolio, investments } = data;
-
-  const chartData = useMemo(() => [
-    { name: 'Equity', value: portfolio.allocation.equity, color: '#0F766E' },
-    { name: 'Debt', value: portfolio.allocation.debt, color: '#6366F1' },
-    { name: 'Liquid', value: portfolio.allocation.liquid, color: '#F59E0B' }
-  ], [portfolio.allocation]);
 
   const filteredInvestments = filter === 'All' 
     ? investments 

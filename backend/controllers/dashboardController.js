@@ -37,10 +37,21 @@ const getDashboardData = async (req, res) => {
       failedSIPs: sips.filter(s => s.status === 'Failed').length
     };
 
-    // Calculate Smart Insights
+    // Calculate Smart Insights (Urgency Prioritized & Capped at 3)
     const insights = [];
 
-    // KYC Insight
+    // 1. SIP Failure (Urgent Error - Priority 1)
+    const failedSips = sips.filter(s => s.status === 'Failed');
+    if (failedSips.length > 0) {
+      insights.push({
+        type: 'error',
+        title: 'SIP Payment Failed',
+        message: 'One or more of your SIPs failed. Please resolve to avoid missing investments.',
+        link: '/sip'
+      });
+    }
+
+    // 2. KYC Missing (Warning - Priority 2)
     if (user.kycStatus !== 'Approved') {
       insights.push({
         type: 'warning',
@@ -50,7 +61,7 @@ const getDashboardData = async (req, res) => {
       });
     }
 
-    // Nominee Insight
+    // 3. Nominee Missing (Warning - Priority 3)
     if (nominees.length === 0) {
       insights.push({
         type: 'warning',
@@ -60,16 +71,8 @@ const getDashboardData = async (req, res) => {
       });
     }
 
-    // SIP Insight
-    const failedSips = sips.filter(s => s.status === 'Failed');
-    if (failedSips.length > 0) {
-      insights.push({
-        type: 'error',
-        title: 'SIP Payment Failed',
-        message: 'One or more of your SIPs failed. Please resolve to avoid missing investments.',
-        link: '/sip'
-      });
-    } else if (sipDetails.nextSIPDate) {
+    // 4. SIP due soon (Info - Priority 4)
+    if (insights.length < 3 && sipDetails.nextSIPDate) {
       const daysToSIP = Math.ceil((new Date(sipDetails.nextSIPDate) - new Date()) / (1000 * 60 * 60 * 24));
       if (daysToSIP >= 0 && daysToSIP <= 3) {
         insights.push({
@@ -81,8 +84,8 @@ const getDashboardData = async (req, res) => {
       }
     }
 
-    // Notifications Insight
-    if (unreadNotifications > 0) {
+    // 5. Notifications Insight (Info - Priority 5)
+    if (insights.length < 3 && unreadNotifications > 0) {
       insights.push({
         type: 'info',
         title: `${unreadNotifications} unread notification${unreadNotifications > 1 ? 's' : ''}`,
@@ -91,13 +94,17 @@ const getDashboardData = async (req, res) => {
       });
     }
 
-    // Generic Insight
-    insights.push({
-      type: 'success',
-      title: 'Download this month\'s statement',
-      message: 'Keep track of your portfolio growth.',
-      link: '/statements'
-    });
+    // 6. Generic Statement Nudge (Success - Priority 6)
+    if (insights.length < 3) {
+      insights.push({
+        type: 'success',
+        title: 'Download this month\'s statement',
+        message: 'Keep track of your portfolio growth.',
+        link: '/statements'
+      });
+    }
+
+    const finalInsights = insights.slice(0, 3);
 
     const recentActivity = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(5).lean();
 
@@ -109,7 +116,7 @@ const getDashboardData = async (req, res) => {
       kycStatus: user.kycStatus,
       healthScore,
       recentActivity,
-      insights
+      insights: finalInsights
     };
 
     // Store in cache

@@ -58,7 +58,7 @@ const getKYCStatus = async (req, res) => {
 
 const getPendingKYC = async (req, res) => {
   try {
-    const pendingKYCs = await KYC.find({ status: 'Under Review' }).populate('userId', 'name email mobile');
+    const pendingKYCs = await KYC.find({ status: 'Under Review' }).populate('userId', 'name email mobile').sort({ createdAt: 1 });
     res.json(pendingKYCs);
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -50,6 +50,13 @@ const CommandCenter = () => {
     }
   }, [data]);
 
+  // Asset allocation matching the user requirement
+  const chartData = useMemo(() => [
+    { name: 'Equity', value: 65, color: '#0F766E' }, // Teal
+    { name: 'Debt', value: 25, color: '#6366F1' }, // Indigo
+    { name: 'Gold', value: 10, color: '#F59E0B' } // Amber
+  ], []);
+
   if (loading) return (
     <div className="animate-pulse space-y-6">
       <div className="h-64 bg-navy-200 rounded-3xl w-full"></div>
@@ -62,13 +69,6 @@ const CommandCenter = () => {
   );
   
   if (!data) return <div>Failed to load data.</div>;
-
-  // Asset allocation matching the user requirement
-  const chartData = useMemo(() => [
-    { name: 'Equity', value: 65, color: '#0F766E' }, // Teal
-    { name: 'Debt', value: 25, color: '#6366F1' }, // Indigo
-    { name: 'Gold', value: 10, color: '#F59E0B' } // Amber
-  ], []);
 
   const today = new Date();
   const yesterday = new Date(today);

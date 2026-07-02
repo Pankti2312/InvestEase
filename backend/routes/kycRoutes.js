@@ -5,19 +5,11 @@ const {
   getPendingKYC, 
   updateKYCStatus 
 } = require('../controllers/kycController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
 const User = require('../models/User');
 
 const router = express.Router();
-
-const adminOnly = async (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(401).json({ message: 'Not authorized as an admin' });
-  }
-};
 
 router.post('/upload', protect, upload.fields([
   { name: 'pan', maxCount: 1 },

@@ -11,7 +11,11 @@ const sipSchema = new mongoose.Schema({
     default: 'Active'
   },
   nextDebit: { type: Date, required: true },
-  failureReason: { type: String }
+  failureReason: { 
+    type: String,
+    enum: ['Insufficient Balance', 'Mandate Expired', 'Bank System Timeout', 'Invalid Account Details', 'None', '', null],
+    default: 'None'
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('SIP', sipSchema);
