@@ -1,33 +1,30 @@
 const calculateHealthScore = (user, sips, nominees) => {
   let score = 0;
 
-  // +20 if KYC approved
-  if (user.kycStatus === 'Approved') score += 20;
+  // 1. KYC Approved (+25%)
+  if (user.kycStatus === 'Approved') score += 25;
 
-  // +20 if at least one active SIP with no failures
+  // 2. Nominee Added (+25%)
+  if (nominees && nominees.length > 0) score += 25;
+
+  // 3. Active SIP exists (+25%)
   const hasActiveSip = sips.some(sip => sip.status === 'Active');
-  if (hasActiveSip) score += 20;
+  if (hasActiveSip) score += 25;
 
-  // +20 if at least one nominee exists
-  if (nominees && nominees.length > 0) score += 20;
+  // 4. Verified Contacts (+12.5% each for email and mobile)
+  if (user.email) score += 12.5;
+  if (user.mobile) score += 12.5;
 
-  // +20 if no failed SIP in the last cycle
-  // Assuming if there's any 'Failed' SIP it counts against them,
-  // but let's check specifically if there are no failed SIPs
-  const hasFailedSip = sips.some(sip => sip.status === 'Failed');
-  if (!hasFailedSip) score += 20;
-
-  // +20 if profile fields (name, email, mobile) are all filled
-  if (user.name && user.email && user.mobile) score += 20;
+  score = Math.round(score);
 
   let label = 'Action Required';
-  if (score >= 80) {
-    label = 'Healthy Portfolio';
+  if (score >= 75) {
+    label = 'Healthy';
   } else if (score >= 50) {
     label = 'Needs Attention';
   }
 
-  const stars = Math.round(score / 20);
+  const stars = Math.round((score / 100) * 5);
 
   return { score, stars, label };
 };

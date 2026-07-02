@@ -1,4 +1,6 @@
 const SIP = require('../models/SIP');
+const Notification = require('../models/Notification');
+const { clearDashboardCache } = require('./dashboardController');
 
 const getSIPs = async (req, res) => {
   try {
@@ -51,7 +53,47 @@ const retrySIP = async (req, res) => {
   }
 };
 
+const createSIP = async (req, res) => {
+  const { fundName, amount, frequency } = req.body;
+
+  if (!fundName || !amount || !frequency) {
+    return res.status(400).json({ message: 'All SIP fields are required.' });
+  }
+
+  try {
+    // Calculate next debit dynamically based on frequency (Weekly / Monthly)
+    const nextDebit = calculateNextDebit(frequency, new Date());
+
+    const sip = await SIP.create({
+      userId: req.user._id,
+      fundName,
+      amount: Number(amount),
+      frequency,
+      status: 'Active',
+      nextDebit,
+      failureReason: 'None'
+    });
+
+    // Evict cache
+    clearDashboardCache(req.user._id);
+
+    // Create Notification event (Event Chain Module 5)
+    await Notification.create({
+      userId: req.user._id,
+      title: 'SIP Registered',
+      message: `Your Systematic Investment Plan of ₹${Number(amount).toLocaleString()} for ${fundName} has been successfully registered.`,
+      type: 'Success',
+      read: false
+    });
+
+    res.status(201).json(sip);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getSIPs,
-  retrySIP
+  retrySIP,
+  createSIP
 };

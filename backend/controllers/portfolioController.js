@@ -1,5 +1,8 @@
 const Portfolio = require('../models/Portfolio');
 const Investment = require('../models/Investment');
+const Notification = require('../models/Notification');
+const { recalculatePortfolio } = require('../services/portfolioService');
+const { clearDashboardCache } = require('./dashboardController');
 
 const getPortfolio = async (req, res) => {
   try {
@@ -43,4 +46,48 @@ const getPortfolio = async (req, res) => {
   }
 };
 
-module.exports = { getPortfolio };
+const buyInvestment = async (req, res) => {
+  const { fundName, type, amount, nav } = req.body;
+  
+  if (!fundName || !type || !amount || !nav) {
+    return res.status(400).json({ message: 'All investment fields are required.' });
+  }
+
+  try {
+    const units = Number(amount) / Number(nav);
+    
+    // Create new investment
+    const investment = await Investment.create({
+      userId: req.user._id,
+      fundName,
+      type,
+      amount: Number(amount),
+      units: Number(units),
+      currentValue: Number(amount) // Initial value matches investment amount
+    });
+
+    // 1. Recalculate portfolio snapshot (Event Chain Module 3/4)
+    await recalculatePortfolio(req.user._id);
+
+    // Evict cache
+    clearDashboardCache(req.user._id);
+
+    // 2. Create notification event (Event Chain Module 5)
+    await Notification.create({
+      userId: req.user._id,
+      title: 'Investment Successful',
+      message: `You successfully invested ₹${Number(amount).toLocaleString()} in ${fundName} (${units.toFixed(2)} units).`,
+      type: 'Success',
+      read: false
+    });
+
+    res.status(201).json(investment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { 
+  getPortfolio,
+  buyInvestment
+};

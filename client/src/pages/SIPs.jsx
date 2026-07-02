@@ -7,6 +7,32 @@ const SIPs = () => {
   const [sips, setSips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [sipFormData, setSipFormData] = useState({
+    fundName: 'SBI Bluechip Fund',
+    amount: '',
+    frequency: 'Monthly'
+  });
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api.post('/sips', sipFormData);
+      setShowCreateModal(false);
+      setSipFormData({
+        fundName: 'SBI Bluechip Fund',
+        amount: '',
+        frequency: 'Monthly'
+      });
+      fetchSIPs();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to register SIP');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => {
     fetchSIPs();
@@ -44,9 +70,17 @@ const SIPs = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-navy-900">Systematic Investment Plans (SIPs)</h1>
-        <p className="text-navy-500">Manage your recurring investments seamlessly.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-navy-900 font-outfit">Systematic Investment Plans (SIPs)</h1>
+          <p className="text-navy-500 text-sm">Manage your recurring investments seamlessly.</p>
+        </div>
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="btn-primary py-2.5 px-5 rounded-2xl font-bold flex items-center gap-1.5 shadow-sm text-sm"
+        >
+          + Create SIP
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -144,6 +178,77 @@ const SIPs = () => {
           </div>
         )}
       </div>
+      {/* Create SIP Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-150 transform transition-all animate-scale-up">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-150">
+              <h3 className="text-lg font-bold text-navy-900 font-outfit">Set Up Systematic Investment Plan (SIP)</h3>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="text-navy-400 hover:text-navy-950 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4 pt-4">
+              <div>
+                <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Select Mutual Fund</label>
+                <select
+                  value={sipFormData.fundName}
+                  onChange={(e) => setSipFormData({ ...sipFormData, fundName: e.target.value })}
+                  className="input-field py-2.5 rounded-xl border-gray-200"
+                >
+                  <option value="SBI Bluechip Fund">SBI Bluechip Fund (Equity)</option>
+                  <option value="Axis Midcap Growth Fund">Axis Midcap Growth Fund (Equity)</option>
+                  <option value="Axis Strategic Debt Fund">Axis Strategic Debt Fund (Debt)</option>
+                  <option value="HDFC Liquid Fund">HDFC Liquid Fund (Liquid)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Frequency</label>
+                  <select
+                    value={sipFormData.frequency}
+                    onChange={(e) => setSipFormData({ ...sipFormData, frequency: e.target.value })}
+                    className="input-field py-2.5 rounded-xl border-gray-200 font-semibold"
+                  >
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={sipFormData.amount}
+                    onChange={(e) => setSipFormData({ ...sipFormData, amount: e.target.value })}
+                    placeholder="Min. ₹500"
+                    min="500"
+                    className="input-field py-2.5 rounded-xl border-gray-200 font-mono font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs text-navy-500 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                <p className="font-semibold">Note on Mandate Auto-Debit:</p>
+                <p className="mt-0.5">By registering this SIP, you authorize InvestEase to schedule auto-debit payments from your linked bank account.</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={creating || !sipFormData.amount}
+                className="w-full btn-primary py-3 rounded-2xl font-bold transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+              >
+                {creating ? 'Registering SIP...' : 'Confirm & Set Up SIP'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

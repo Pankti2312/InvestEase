@@ -8,6 +8,57 @@ const Portfolio = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyFormData, setBuyFormData] = useState({
+    fundName: 'SBI Bluechip Fund',
+    type: 'Equity',
+    amount: '',
+    nav: '50'
+  });
+
+  const handleBuyCategoryChange = (type) => {
+    let nav = '50';
+    let defaultFund = 'SBI Bluechip Fund';
+    if (type === 'Equity') {
+      nav = '50';
+      defaultFund = 'SBI Bluechip Fund';
+    } else if (type === 'Debt') {
+      nav = '25';
+      defaultFund = 'Axis Strategic Debt Fund';
+    } else if (type === 'Liquid') {
+      nav = '15';
+      defaultFund = 'HDFC Liquid Fund';
+    }
+    setBuyFormData({
+      ...buyFormData,
+      type,
+      fundName: defaultFund,
+      nav
+    });
+  };
+
+  const handleBuySubmit = async (e) => {
+    e.preventDefault();
+    setBuying(true);
+    try {
+      await api.post('/portfolio/invest', buyFormData);
+      setShowBuyModal(false);
+      setBuyFormData({
+        fundName: 'SBI Bluechip Fund',
+        type: 'Equity',
+        amount: '',
+        nav: '50'
+      });
+      // Refresh portfolio data
+      const response = await api.get('/portfolio');
+      setData(response.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to complete investment.');
+    } finally {
+      setBuying(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPortfolio = async () => {
@@ -51,12 +102,20 @@ const Portfolio = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900">Portfolio Details</h1>
-          <p className="text-navy-500">Comprehensive breakdown of your asset allocation.</p>
+          <h1 className="text-2xl font-bold text-navy-900 font-outfit">Portfolio Details</h1>
+          <p className="text-navy-500 text-sm">Comprehensive breakdown of your asset allocation.</p>
         </div>
-        <button className="btn-secondary flex items-center gap-2">
-          <Download className="w-4 h-4" /> Download Report
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowBuyModal(true)}
+            className="btn-primary py-2.5 px-5 rounded-2xl font-bold text-sm shadow-sm"
+          >
+            + Add Investment
+          </button>
+          <button className="btn-secondary flex items-center gap-2 py-2.5 px-5 rounded-2xl font-bold text-sm">
+            <Download className="w-4 h-4" /> Download Report
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -185,6 +244,104 @@ const Portfolio = () => {
           </table>
         </div>
       </div>
+      {/* Buy Investment Modal */}
+      {showBuyModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-150 transform transition-all animate-scale-up">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-150">
+              <h3 className="text-lg font-bold text-navy-900 font-outfit">Buy Mutual Fund</h3>
+              <button 
+                onClick={() => setShowBuyModal(false)}
+                className="text-navy-400 hover:text-navy-950 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleBuySubmit} className="space-y-4 pt-4">
+              <div>
+                <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Asset Category</label>
+                <select
+                  value={buyFormData.type}
+                  onChange={(e) => handleBuyCategoryChange(e.target.value)}
+                  className="input-field py-2.5 rounded-xl border-gray-200"
+                >
+                  <option value="Equity">Equity (Growth)</option>
+                  <option value="Debt">Debt (Stable)</option>
+                  <option value="Liquid">Liquid (Cash)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Select Mutual Fund</label>
+                <select
+                  value={buyFormData.fundName}
+                  onChange={(e) => setBuyFormData({ ...buyFormData, fundName: e.target.value })}
+                  className="input-field py-2.5 rounded-xl border-gray-200"
+                >
+                  {buyFormData.type === 'Equity' && (
+                    <>
+                      <option value="SBI Bluechip Fund">SBI Bluechip Fund</option>
+                      <option value="Axis Midcap Growth Fund">Axis Midcap Growth Fund</option>
+                      <option value="Parag Parikh Flexi Cap Fund">Parag Parikh Flexi Cap Fund</option>
+                    </>
+                  )}
+                  {buyFormData.type === 'Debt' && (
+                    <>
+                      <option value="Axis Strategic Debt Fund">Axis Strategic Debt Fund</option>
+                      <option value="ICICI Prudential Constant Maturity Fund">ICICI Prudential Constant Maturity Fund</option>
+                    </>
+                  )}
+                  {buyFormData.type === 'Liquid' && (
+                    <>
+                      <option value="HDFC Liquid Fund">HDFC Liquid Fund</option>
+                      <option value="SBI Liquid Direct Growth Fund">SBI Liquid Direct Growth Fund</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">NAV (Net Asset Value)</label>
+                  <div className="input-field py-2.5 bg-gray-50 border-gray-200 text-navy-700 font-mono font-bold rounded-xl select-none">
+                    ₹{buyFormData.nav}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={buyFormData.amount}
+                    onChange={(e) => setBuyFormData({ ...buyFormData, amount: e.target.value })}
+                    placeholder="Min. ₹500"
+                    min="500"
+                    className="input-field py-2.5 rounded-xl border-gray-200 font-mono font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {buyFormData.amount && (
+                <div className="bg-teal-50 border border-teal-100 p-3.5 rounded-2xl flex justify-between items-center text-xs">
+                  <span className="font-bold text-teal-800">Estimated Units:</span>
+                  <span className="font-mono font-black text-teal-700 text-sm">
+                    {(Number(buyFormData.amount) / Number(buyFormData.nav)).toFixed(4)} Units
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={buying || !buyFormData.amount}
+                className="w-full btn-primary py-3 rounded-2xl font-bold transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+              >
+                {buying ? 'Processing Purchase...' : 'Confirm & Buy Mutual Fund'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -116,7 +116,13 @@ const getDashboardData = async (req, res) => {
       kycStatus: user.kycStatus,
       healthScore,
       recentActivity,
-      insights: finalInsights
+      insights: finalInsights,
+      onboarding: {
+        kycCompleted: user.kycStatus === 'Approved',
+        nomineeAdded: nominees.length > 0,
+        investmentAdded: portfolioSnapshot.totalValue > 0,
+        sipCreated: sips.length > 0
+      }
     };
 
     // Store in cache
@@ -128,4 +134,11 @@ const getDashboardData = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardData };
+const clearDashboardCache = (userId) => {
+  dashboardCache.delete(userId.toString());
+};
+
+module.exports = { 
+  getDashboardData,
+  clearDashboardCache
+};

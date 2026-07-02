@@ -15,6 +15,57 @@ const CommandCenter = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [animatedValue, setAnimatedValue] = useState(0);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyFormData, setBuyFormData] = useState({
+    fundName: 'SBI Bluechip Fund',
+    type: 'Equity',
+    amount: '',
+    nav: '50'
+  });
+
+  const handleBuyCategoryChange = (type) => {
+    let nav = '50';
+    let defaultFund = 'SBI Bluechip Fund';
+    if (type === 'Equity') {
+      nav = '50';
+      defaultFund = 'SBI Bluechip Fund';
+    } else if (type === 'Debt') {
+      nav = '25';
+      defaultFund = 'Axis Strategic Debt Fund';
+    } else if (type === 'Liquid') {
+      nav = '15';
+      defaultFund = 'HDFC Liquid Fund';
+    }
+    setBuyFormData({
+      ...buyFormData,
+      type,
+      fundName: defaultFund,
+      nav
+    });
+  };
+
+  const handleBuySubmit = async (e) => {
+    e.preventDefault();
+    setBuying(true);
+    try {
+      await api.post('/portfolio/invest', buyFormData);
+      setShowBuyModal(false);
+      setBuyFormData({
+        fundName: 'SBI Bluechip Fund',
+        type: 'Equity',
+        amount: '',
+        nav: '50'
+      });
+      // Refresh dashboard data
+      const response = await api.get('/dashboard');
+      setData(response.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to complete investment.');
+    } finally {
+      setBuying(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -56,6 +107,14 @@ const CommandCenter = () => {
     { name: 'Debt', value: 25, color: '#6366F1' }, // Indigo
     { name: 'Gold', value: 10, color: '#F59E0B' } // Amber
   ], []);
+
+  const completedCount = data?.onboarding
+    ? (data.onboarding.kycCompleted ? 1 : 0) +
+      (data.onboarding.nomineeAdded ? 1 : 0) +
+      (data.onboarding.investmentAdded ? 1 : 0) +
+      (data.onboarding.sipCreated ? 1 : 0)
+    : 0;
+  const percentComplete = (completedCount / 4) * 100;
 
   if (loading) return (
     <div className="animate-pulse space-y-6">
@@ -132,6 +191,121 @@ const CommandCenter = () => {
           </div>
         </div>
       </div>
+      {/* Dynamic Onboarding Checklist */}
+      {data && data.onboarding && percentComplete < 100 && (
+        <div className="bg-white rounded-3xl border border-teal-100 shadow-sm p-6 space-y-6 animate-fade-in hover:shadow-md transition-shadow">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-navy-900 flex items-center gap-2 font-outfit">
+                  <Zap className="w-5 h-5 text-amber-500 animate-bounce" />
+                  Welcome to InvestEase! Let's get you set up 👋
+                </h3>
+                <p className="text-xs text-navy-500">Complete these simple steps to secure your account and start building wealth.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-100 px-2.5 py-1 rounded-full">
+                  {completedCount}/4 Steps
+                </span>
+                <span className="text-sm font-mono font-black text-teal-600">{percentComplete}%</span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-150 h-2.5 rounded-full overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-teal-500 to-emerald-500 h-full rounded-full transition-all duration-500" 
+                style={{ width: `${percentComplete}%` }}
+              ></div>
+            </div>
+
+            {/* Grid of Steps */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* KYC */}
+              <div className={`p-4 rounded-2xl border transition-all ${data.onboarding.kycCompleted ? 'bg-emerald-50/20 border-emerald-100/50 opacity-75' : 'bg-white border-gray-100 hover:border-teal-200'}`}>
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={data.onboarding.kycCompleted} 
+                    readOnly 
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 mt-0.5 cursor-default" 
+                  />
+                  <div>
+                    <p className={`text-sm font-bold ${data.onboarding.kycCompleted ? 'text-navy-700 line-through' : 'text-navy-900'}`}>Complete KYC Documentation</p>
+                    <p className="text-xs text-navy-500 mt-0.5">Verify your identity to unlock deposits.</p>
+                    {!data.onboarding.kycCompleted && (
+                      <Link to="/kyc" className="text-xs font-bold text-teal-600 hover:underline mt-2 inline-flex items-center gap-0.5">
+                        Start Verification <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Nominee */}
+              <div className={`p-4 rounded-2xl border transition-all ${data.onboarding.nomineeAdded ? 'bg-emerald-50/20 border-emerald-100/50 opacity-75' : 'bg-white border-gray-100 hover:border-teal-200'}`}>
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={data.onboarding.nomineeAdded} 
+                    readOnly 
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 mt-0.5 cursor-default" 
+                  />
+                  <div>
+                    <p className={`text-sm font-bold ${data.onboarding.nomineeAdded ? 'text-navy-700 line-through' : 'text-navy-900'}`}>Add Account Nominee</p>
+                    <p className="text-xs text-navy-500 mt-0.5">Nominate a beneficiary for safety.</p>
+                    {!data.onboarding.nomineeAdded && (
+                      <Link to="/nominee" className="text-xs font-bold text-teal-600 hover:underline mt-2 inline-flex items-center gap-0.5">
+                        Add Nominee <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Investment */}
+              <div className={`p-4 rounded-2xl border transition-all ${data.onboarding.investmentAdded ? 'bg-emerald-50/20 border-emerald-100/50 opacity-75' : 'bg-white border-gray-100 hover:border-teal-200'}`}>
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={data.onboarding.investmentAdded} 
+                    readOnly 
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 mt-0.5 cursor-default" 
+                  />
+                  <div>
+                    <p className={`text-sm font-bold ${data.onboarding.investmentAdded ? 'text-navy-700 line-through' : 'text-navy-900'}`}>Make Your First Investment</p>
+                    <p className="text-xs text-navy-500 mt-0.5">Start compounding by buying a mutual fund.</p>
+                    {!data.onboarding.investmentAdded && (
+                      <button onClick={() => setShowBuyModal(true)} className="text-xs font-bold text-teal-600 hover:underline mt-2 inline-flex items-center gap-0.5 bg-transparent border-none p-0 cursor-pointer">
+                        Invest Now <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Create SIP */}
+              <div className={`p-4 rounded-2xl border transition-all ${data.onboarding.sipCreated ? 'bg-emerald-50/20 border-emerald-100/50 opacity-75' : 'bg-white border-gray-100 hover:border-teal-200'}`}>
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={data.onboarding.sipCreated} 
+                    readOnly 
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 mt-0.5 cursor-default" 
+                  />
+                  <div>
+                    <p className={`text-sm font-bold ${data.onboarding.sipCreated ? 'text-navy-700 line-through' : 'text-navy-900'}`}>Start a Systematic Plan (SIP)</p>
+                    <p className="text-xs text-navy-500 mt-0.5">Automate recurring investing cycles.</p>
+                    {!data.onboarding.sipCreated && (
+                      <Link to="/sip" className="text-xs font-bold text-teal-600 hover:underline mt-2 inline-flex items-center gap-0.5">
+                        Set Up SIP <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* 2. Top-Level Core Modules (Health, Portfolio & Profile Completion) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -147,22 +321,30 @@ const CommandCenter = () => {
                 <circle 
                   cx="56" cy="56" r="48" fill="none" stroke="#10B981" strokeWidth="8" 
                   strokeDasharray="301.6" 
-                  strokeDashoffset={301.6 - (301.6 * 96) / 100} 
+                  strokeDashoffset={301.6 - (301.6 * data.healthScore.score) / 100} 
                   className="transition-all duration-1000 ease-out"
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center flex-col animate-fade-in">
-                <span className="text-2xl font-mono font-black text-navy-900 tracking-tighter">96%</span>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Excellent</span>
+                <span className="text-2xl font-mono font-black text-navy-900 tracking-tighter">{data.healthScore.score}%</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                  data.healthScore.score >= 75 ? 'text-emerald-600' : 
+                  data.healthScore.score >= 50 ? 'text-amber-500' : 'text-rose-500'
+                }`}>{data.healthScore.label}</span>
               </div>
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full inline-block">
-                ↑ +4 this month
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full inline-block border ${
+                data.healthScore.score >= 75 ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 
+                data.healthScore.score >= 50 ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-rose-700 bg-rose-50 border-rose-100'
+              }`}>
+                {data.healthScore.score >= 75 ? 'Healthy Setup' : 'Action Required'}
               </span>
-              <p className="text-xs text-navy-500 mt-1">Excellent diversification and active KYC compliance.</p>
+              <p className="text-xs text-navy-500 mt-1">
+                {data.healthScore.score === 100 ? 'All setups verified. Perfect score!' : 'Complete onboarding checks to optimize.'}
+              </p>
             </div>
           </div>
           
@@ -478,7 +660,105 @@ const CommandCenter = () => {
           </div>
         </div>
 
-      </div>
+      {/* Buy Investment Modal */}
+      {showBuyModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-150 transform transition-all animate-scale-up">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-150">
+              <h3 className="text-lg font-bold text-navy-900 font-outfit">Buy Mutual Fund</h3>
+              <button 
+                onClick={() => setShowBuyModal(false)}
+                className="text-navy-400 hover:text-navy-950 bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleBuySubmit} className="space-y-4 pt-4">
+              <div>
+                <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Asset Category</label>
+                <select
+                  value={buyFormData.type}
+                  onChange={(e) => handleBuyCategoryChange(e.target.value)}
+                  className="input-field py-2.5 rounded-xl border-gray-200"
+                >
+                  <option value="Equity">Equity (Growth)</option>
+                  <option value="Debt">Debt (Stable)</option>
+                  <option value="Liquid">Liquid (Cash)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Select Mutual Fund</label>
+                <select
+                  value={buyFormData.fundName}
+                  onChange={(e) => setBuyFormData({ ...buyFormData, fundName: e.target.value })}
+                  className="input-field py-2.5 rounded-xl border-gray-200"
+                >
+                  {buyFormData.type === 'Equity' && (
+                    <>
+                      <option value="SBI Bluechip Fund">SBI Bluechip Fund</option>
+                      <option value="Axis Midcap Growth Fund">Axis Midcap Growth Fund</option>
+                      <option value="Parag Parikh Flexi Cap Fund">Parag Parikh Flexi Cap Fund</option>
+                    </>
+                  )}
+                  {buyFormData.type === 'Debt' && (
+                    <>
+                      <option value="Axis Strategic Debt Fund">Axis Strategic Debt Fund</option>
+                      <option value="ICICI Prudential Constant Maturity Fund">ICICI Prudential Constant Maturity Fund</option>
+                    </>
+                  )}
+                  {buyFormData.type === 'Liquid' && (
+                    <>
+                      <option value="HDFC Liquid Fund">HDFC Liquid Fund</option>
+                      <option value="SBI Liquid Direct Growth Fund">SBI Liquid Direct Growth Fund</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">NAV (Net Asset Value)</label>
+                  <div className="input-field py-2.5 bg-gray-50 border-gray-200 text-navy-700 font-mono font-bold rounded-xl select-none">
+                    ₹{buyFormData.nav}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-navy-700 uppercase mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={buyFormData.amount}
+                    onChange={(e) => setBuyFormData({ ...buyFormData, amount: e.target.value })}
+                    placeholder="Min. ₹500"
+                    min="500"
+                    className="input-field py-2.5 rounded-xl border-gray-200 font-mono font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {buyFormData.amount && (
+                <div className="bg-teal-50 border border-teal-100 p-3.5 rounded-2xl flex justify-between items-center text-xs">
+                  <span className="font-bold text-teal-800">Estimated Units:</span>
+                  <span className="font-mono font-black text-teal-700 text-sm">
+                    {(Number(buyFormData.amount) / Number(buyFormData.nav)).toFixed(4)} Units
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={buying || !buyFormData.amount}
+                className="w-full btn-primary py-3 rounded-2xl font-bold transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+              >
+                {buying ? 'Processing Purchase...' : 'Confirm & Buy Mutual Fund'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
   );
 };

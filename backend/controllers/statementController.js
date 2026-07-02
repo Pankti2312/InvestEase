@@ -4,6 +4,7 @@ const path = require('path');
 const Statement = require('../models/Statement');
 const Portfolio = require('../models/Portfolio');
 const SIP = require('../models/SIP');
+const Investment = require('../models/Investment');
 
 const getStatements = async (req, res) => {
   try {
@@ -26,6 +27,7 @@ const generateStatement = async (req, res) => {
 
     let portfolio = await Portfolio.findOne({ userId: req.user._id });
     const sips = await SIP.find({ userId: req.user._id });
+    const investments = await Investment.find({ userId: req.user._id });
 
     if (!portfolio) {
       // Auto-create a default empty portfolio document on the fly so statement generation succeeds
@@ -85,6 +87,37 @@ const generateStatement = async (req, res) => {
     doc.text(`Debt: ${portfolio.allocation.debt}%`, 250, doc.y - 12);
     doc.text(`Liquid: ${portfolio.allocation.liquid}%`, 440, doc.y - 12);
     doc.moveDown(4);
+
+    // Detailed Holdings
+    doc.fontSize(14).fillColor('#102a43').text('Detailed Investment Holdings', { underline: true });
+    doc.moveDown(1);
+    
+    if (investments.length === 0) {
+      doc.fontSize(10).text('No investment holdings found.');
+    } else {
+      let yPos = doc.y;
+      doc.fontSize(10).fillColor('#102a43').font('Helvetica-Bold');
+      doc.text('Fund Name', 50, yPos);
+      doc.text('Category', 280, yPos);
+      doc.text('Amount Invested', 370, yPos);
+      doc.text('Current Value', 470, yPos);
+      
+      doc.moveTo(50, yPos + 15).lineTo(550, yPos + 15).stroke('#bcccdc');
+      
+      doc.font('Helvetica');
+      yPos += 25;
+      
+      investments.forEach(inv => {
+        doc.fillColor('#334e68');
+        doc.text(inv.fundName, 50, yPos, { width: 220 });
+        doc.text(inv.type, 280, yPos);
+        doc.text(`Rs. ${inv.amount.toLocaleString()}`, 370, yPos);
+        doc.text(`Rs. ${inv.currentValue.toLocaleString()}`, 470, yPos);
+        yPos += 25;
+      });
+      doc.y = yPos;
+    }
+    doc.moveDown(3);
 
     // SIP Summary
     doc.fontSize(14).fillColor('#102a43').text('Systematic Investment Plans (SIPs)', { underline: true });
