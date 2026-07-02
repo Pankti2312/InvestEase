@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import api from '../services/api';
-import { Check, X, FileText, MessageSquare, AlertCircle, Zap, Settings } from 'lucide-react';
+import { Check, X, FileText, MessageSquare, AlertCircle, Zap, Settings, Users, Activity, DollarSign, Clock } from 'lucide-react';
 import { TableSkeleton } from '../components/SkeletonLoader';
 
 const Admin = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('kyc'); // 'kyc' or 'support'
+  const [adminStats, setAdminStats] = useState(null);
   
   // KYC State
   const [pendingKyc, setPendingKyc] = useState([]);
@@ -31,6 +32,9 @@ const Admin = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const statsRes = await api.get('/admin/dashboard');
+      setAdminStats(statsRes.data);
+
       if (activeTab === 'kyc') {
         const response = await api.get('/kyc/admin/pending');
         setPendingKyc(response.data);
@@ -100,57 +104,139 @@ const Admin = () => {
         </div>
       </div>
 
-      {/* Operations Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Dynamic Operations Dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Operations Overview */}
-        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-          <h3 className="text-base font-bold text-navy-900 font-outfit mb-4 flex items-center gap-2">
-            <Settings className="w-4 h-4 text-navy-500" /> Operations Overview
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-navy-50/50 p-3 rounded-2xl border border-gray-50">
-              <p className="text-navy-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Customers</p>
-              <p className="font-mono text-xl font-bold text-navy-900">1,204</p>
-            </div>
-            <div className="bg-navy-50/50 p-3 rounded-2xl border border-gray-50">
-              <p className="text-navy-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Pending Tickets</p>
-              <p className="font-mono text-xl font-bold text-rose-500">{tickets.filter(t => t.status === 'Open').length || 7}</p>
-            </div>
-            <div className="bg-navy-50/50 p-3 rounded-2xl border border-gray-50">
-              <p className="text-navy-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Pending KYC</p>
-              <p className="font-mono text-xl font-bold text-amber-500">{pendingKyc.length || 18}</p>
-            </div>
-            <div className="bg-navy-50/50 p-3 rounded-2xl border border-gray-50">
-              <p className="text-navy-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Avg Resolution</p>
-              <p className="font-mono text-xl font-bold text-navy-900">14 min</p>
+        {/* Platform Metrics */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <h3 className="text-base font-bold text-navy-900 font-outfit mb-4 flex items-center gap-2">
+              <Settings className="w-4 h-4 text-navy-500" /> Platform Metrics
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-navy-50/50 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Users className="w-4 h-4" /></div>
+                  <span className="text-sm font-medium text-navy-900">Total Investors</span>
+                </div>
+                <span className="font-mono font-bold text-navy-900">{adminStats?.metrics?.totalInvestors || 0}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-navy-50/50 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><FileText className="w-4 h-4" /></div>
+                  <span className="text-sm font-medium text-navy-900">Pending KYC</span>
+                </div>
+                <span className="font-mono font-bold text-amber-600">{adminStats?.metrics?.pendingKycCount || 0}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-navy-50/50 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center"><MessageSquare className="w-4 h-4" /></div>
+                  <span className="text-sm font-medium text-navy-900">Pending Tickets</span>
+                </div>
+                <span className="font-mono font-bold text-rose-600">{adminStats?.metrics?.pendingTicketsCount || 0}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-navy-50/50 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><Activity className="w-4 h-4" /></div>
+                  <span className="text-sm font-medium text-navy-900">Active SIPs</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-600">{adminStats?.metrics?.activeSipsCount || 0}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-teal-50 rounded-2xl border border-teal-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center"><DollarSign className="w-4 h-4" /></div>
+                  <span className="text-sm font-bold text-teal-900">Total Investments</span>
+                </div>
+                <span className="font-mono font-black text-teal-700">₹{adminStats?.metrics?.totalInvestments?.toLocaleString() || 0}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Service Impact Dashboard (Hackathon WOW factor) */}
-        <div className="bg-gradient-to-br from-navy-900 to-blue-900 rounded-3xl p-6 text-white shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-teal-500 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
-          <h3 className="font-outfit text-base font-bold mb-4 flex items-center text-white">
-            <Zap className="w-4 h-4 text-amber-400 mr-2" /> Service Impact
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mb-0.5">Self-Service</p>
-              <p className="font-mono text-xl font-black text-emerald-400">86%</p>
+        {/* Recent Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Recent Registrations */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-base font-bold text-navy-900 font-outfit mb-4">Recent Registrations</h3>
+              <div className="space-y-3">
+                {adminStats?.recentActivity?.registrations?.map((user) => (
+                  <div key={user._id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                    <div>
+                      <p className="font-medium text-navy-900">{user.name}</p>
+                      <p className="text-xs text-navy-500">{user.email}</p>
+                    </div>
+                    <span className="text-xs font-medium text-navy-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-md">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mb-0.5">Calls Saved</p>
-              <p className="font-mono text-xl font-bold text-white">742</p>
+            
+            {/* Latest KYC */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-base font-bold text-navy-900 font-outfit mb-4">Latest KYC</h3>
+              <div className="space-y-3">
+                {adminStats?.recentActivity?.kyc?.map((kyc) => (
+                  <div key={kyc._id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                    <p className="font-medium text-navy-900">{kyc.userId?.name || 'Unknown'}</p>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                      kyc.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
+                      kyc.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                    }`}>
+                      {kyc.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mb-0.5">Cost Saved</p>
-              <p className="font-mono text-xl font-bold text-emerald-400">₹43,000</p>
+
+            {/* Latest Support */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-base font-bold text-navy-900 font-outfit mb-4">Latest Support Requests</h3>
+              <div className="space-y-3">
+                {adminStats?.recentActivity?.support?.map((ticket) => (
+                  <div key={ticket._id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="font-medium text-navy-900 truncate">{ticket.subject}</p>
+                      <p className="text-xs text-navy-500">{ticket.userId?.name}</p>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap ${
+                      ticket.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' :
+                      ticket.status === 'Open' ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {ticket.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mb-0.5">CSAT</p>
-              <p className="font-mono text-xl font-bold text-white">4.8/5</p>
+
+            {/* Recent Investments */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-base font-bold text-navy-900 font-outfit mb-4">Recent Investments</h3>
+              <div className="space-y-3">
+                {adminStats?.recentActivity?.investments?.map((inv) => (
+                  <div key={inv._id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="font-medium text-navy-900 truncate">{inv.fundName}</p>
+                      <p className="text-xs text-navy-500">{inv.userId?.name}</p>
+                    </div>
+                    <span className="font-mono font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded-md whitespace-nowrap">
+                      ₹{inv.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
+
           </div>
         </div>
 

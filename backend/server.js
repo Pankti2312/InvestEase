@@ -17,6 +17,7 @@ const statementRoutes = require("./routes/statementRoutes");
 const sipRoutes = require("./routes/sipRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const assistantRoutes = require("./routes/assistantRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use("/api/statements", statementRoutes);
 app.use("/api/sips", sipRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/assistant", assistantRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use("/uploads", express.static("uploads"));
 
