@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, Clock, XCircle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
@@ -75,27 +75,36 @@ const KYC = () => {
         <p className="text-navy-500">Upload your documents to complete your profile verification.</p>
       </div>
 
-      {/* Timeline */}
-      <div className="card">
-        <h3 className="font-semibold text-navy-900 mb-6">Verification Progress</h3>
-        <div className="flex items-center">
+      {/* Premium Timeline */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow duration-300">
+        <h3 className="font-outfit font-bold text-xl text-navy-900 mb-8 flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-teal-500" /> Verification Status
+        </h3>
+        
+        <div className="flex items-center justify-between relative px-4 sm:px-8">
+          {/* Background Track */}
+          <div className="absolute top-1/2 left-12 right-12 h-1.5 bg-gray-100 -translate-y-1/2 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-teal-400 to-teal-600 transition-all duration-1000 ease-in-out" 
+              style={{ width: `${(steps.filter(s => s.completed).length / (steps.length - 1)) * 100}%` }}
+            />
+          </div>
+
           {steps.map((step, index) => (
-            <div key={step.label} className={`flex-1 relative ${index !== steps.length - 1 ? 'after:content-[""] after:h-1 after:w-full after:absolute after:top-4 after:left-1/2 after:-z-10 ' + (step.completed && !step.failed ? 'after:bg-teal-500' : 'after:bg-gray-200') : ''}`}>
-              <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 z-10 bg-white ${
-                  step.failed ? 'border-red-500 text-red-500' : 
-                  step.completed ? 'border-teal-500 bg-teal-500 text-white' : 
-                  step.active ? 'border-teal-500 text-teal-600' : 'border-gray-300 text-gray-400'
-                }`}>
-                  {step.failed ? <XCircle className="w-5 h-5 bg-white rounded-full" /> : 
-                   step.completed ? <CheckCircle className="w-5 h-5" /> : 
-                   <Clock className="w-4 h-4" />}
-                </div>
-                <span className={`mt-2 text-sm font-medium ${
-                  step.failed ? 'text-red-600' : 
-                  step.completed || step.active ? 'text-navy-900' : 'text-gray-400'
-                }`}>{step.label}</span>
+            <div key={step.label} className="relative z-10 flex flex-col items-center gap-3">
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm ${
+                step.failed ? 'bg-rose-50 text-rose-500 border-2 border-rose-200 shadow-rose-100' : 
+                step.completed ? 'bg-gradient-to-br from-teal-400 to-teal-600 text-white shadow-teal-200 scale-110' : 
+                step.active ? 'bg-white text-teal-600 border-2 border-teal-500 shadow-teal-100 ring-4 ring-teal-50 scale-110' : 'bg-gray-50 text-gray-300 border border-gray-200'
+              }`}>
+                {step.failed ? <XCircle className="w-6 h-6 sm:w-7 sm:h-7" /> : 
+                 step.completed ? <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7" /> : 
+                 <Clock className="w-5 h-5 sm:w-6 sm:h-6" />}
               </div>
+              <span className={`text-xs sm:text-sm font-bold font-outfit text-center ${
+                step.failed ? 'text-rose-600' : 
+                step.completed || step.active ? 'text-navy-900' : 'text-gray-400'
+              }`}>{step.label}</span>
             </div>
           ))}
         </div>
