@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Portfolio = require('../models/Portfolio');
+const { trackEvent } = require('../services/eventService');
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -41,6 +42,14 @@ const registerUser = async (req, res) => {
           liquid: 0
         }
       });
+
+      await trackEvent(
+        user._id,
+        'USER_REGISTERED',
+        'Welcome to InvestEase!',
+        'Your account has been successfully created. Complete your KYC to start investing.',
+        'Success'
+      );
 
       res.status(201).json({
         _id: user._id,

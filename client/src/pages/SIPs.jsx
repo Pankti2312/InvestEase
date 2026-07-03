@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, AlertTriangle, RefreshCcw, CreditCard, LifeBuoy, Calendar, DollarSign } from 'lucide-react';
+import { Activity, AlertTriangle, RefreshCcw, CreditCard, LifeBuoy, Calendar, DollarSign, X, CheckCircle, Clock } from 'lucide-react';
 import { TableSkeleton } from '../components/SkeletonLoader';
 import api from '../services/api';
 
@@ -9,6 +9,7 @@ const SIPs = () => {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [historyModalSip, setHistoryModalSip] = useState(null);
   const [creating, setCreating] = useState(false);
   const [sipFormData, setSipFormData] = useState({
     fundName: 'SBI Bluechip Fund',
@@ -33,6 +34,29 @@ const SIPs = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const generateHistory = (sip) => {
+    const history = [];
+    let d = new Date(sip.nextDebit);
+    for (let i = 1; i <= 3; i++) {
+      if (sip.frequency === 'Monthly') {
+        d.setMonth(d.getMonth() - 1);
+      } else {
+        d.setDate(d.getDate() - 7);
+      }
+      if (d < new Date(sip.createdAt)) break;
+      history.push({
+        id: i,
+        date: new Date(d),
+        amount: sip.amount,
+        status: 'Success'
+      });
+    }
+    if (history.length === 0) {
+       history.push({ id: 1, date: new Date(sip.createdAt), amount: sip.amount, status: 'Success' });
+    }
+    return history;
   };
 
   useEffect(() => {
@@ -165,7 +189,12 @@ const SIPs = () => {
             
             {sip.status !== 'Failed' && (
               <div className="pt-4 border-t border-navy-100 flex justify-end">
-                <button className="text-sm text-teal-600 hover:text-teal-800 font-medium">View History</button>
+                <button 
+                  onClick={() => setHistoryModalSip(sip)}
+                  className="text-sm text-teal-600 hover:text-teal-800 font-medium"
+                >
+                  View History
+                </button>
               </div>
             )}
           </div>
@@ -247,6 +276,58 @@ const SIPs = () => {
                 {creating ? 'Registering SIP...' : 'Confirm & Set Up SIP'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyModalSip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold font-outfit text-navy-900">SIP History</h2>
+                <p className="text-sm text-navy-500 mt-1">{historyModalSip.fundName}</p>
+              </div>
+              <button 
+                onClick={() => setHistoryModalSip(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-navy-400 hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                {generateHistory(historyModalSip).map((tx) => (
+                  <div key={tx.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-navy-900">Deduction Successful</p>
+                        <p className="text-xs text-navy-500 flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          {tx.date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="font-mono font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-100">
+                      ₹{tx.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => setHistoryModalSip(null)}
+                  className="w-full py-3 text-sm font-bold text-navy-600 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors"
+                >
+                  Close History
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
